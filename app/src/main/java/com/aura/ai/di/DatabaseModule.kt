@@ -22,9 +22,7 @@ object DatabaseModule {
             context,
             T1000Database::class.java,
             "t1000_database"
-        )
-            .fallbackToDestructiveMigration()
-            .build()
+        ).build()
     }
 
     @Singleton
