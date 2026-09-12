@@ -1,4 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">T1000</string>
-    <string name="wake_phrase">Hey T1000</string>
+    <string name="home">Home</string>
+    <string name="settings">Settings</string>
+    <string name="voice_control">Voice Control</string>
+    <string name="agent_status">Agent Status</string>
 </resources>
