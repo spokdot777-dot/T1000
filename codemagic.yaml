@@ -1,0 +1,85 @@
+workflows:
+  android-build:
+    name: Android Build
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      android_sdk: 35
+      groups:
+        - google_play # <-- (Includes GCLOUD_SERVICE_ACCOUNT_CREDENTIALS)
+    triggering:
+      events:
+        - push
+      branch:
+        include_patterns:
+          - main
+          - develop
+      tag:
+        include_patterns:
+          - v*
+    scripts:
+      - name: Setup Android SDK
+        script: |
+          sdkmanager --version
+          echo "Android SDK is available"
+      - name: Run Lint
+        script: |
+          cd app
+          ./gradlew lint --stacktrace
+      - name: Build Debug APK
+        script: |
+          cd app
+          ./gradlew assembleDebug --stacktrace
+      - name: Run Unit Tests
+        script: |
+          cd app
+          ./gradlew testDebugUnitTest --stacktrace
+      - name: Build Release APK
+        script: |
+          cd app
+          ./gradlew assembleRelease --stacktrace
+    artifacts:
+      - app/build/outputs/**/*.apk
+      - app/build/reports/**
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true
+
+  web-build:
+    name: Web Build (Next.js)
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    triggering:
+      events:
+        - push
+      branch:
+        include_patterns:
+          - main
+          - develop
+    scripts:
+      - name: Setup Node.js
+        script: |
+          node --version
+          npm --version
+          corepack enable
+          pnpm --version
+      - name: Install Dependencies
+        script: |
+          pnpm install --frozen-lockfile
+      - name: Run Linter
+        script: |
+          pnpm lint || true
+      - name: Build Next.js
+        script: |
+          pnpm build
+      - name: Export Static Site
+        script: |
+          pnpm build
+    artifacts:
+      - .next/**
+      - out/**
+    publishing:
+      vercel:
+        enabled: true
