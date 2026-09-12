@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">T1000</string>
+    <string name="wake_phrase">Hey T1000</string>
+</resources>
