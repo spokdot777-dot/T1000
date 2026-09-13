@@ -24,9 +24,11 @@ sealed interface SpeechEvent {
 }
 
 /**
- * Wraps Android's on-device-capable [SpeechRecognizer] as a cold Flow. Recognition
- * uses the platform recognizer, which on modern devices runs locally; no audio is
- * sent to any T1000-controlled server.
+ * Wraps Android's SpeechRecognizer as a cold Flow.
+ *
+ * Offline recognition is requested when available, but is not forced. This lets
+ * Android fall back to its configured recognition provider when an offline model
+ * is unavailable for the device language.
  */
 @Singleton
 class SpeechToText @Inject constructor(
@@ -45,8 +47,10 @@ class SpeechToText @Inject constructor(
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            // Do not force offline recognition. Some devices/languages have no
+            // installed offline model, which otherwise causes intermittent errors.
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
         }
 
         val listener = object : RecognitionListener {
@@ -81,24 +85,33 @@ class SpeechToText @Inject constructor(
         }
 
         recognizer.setRecognitionListener(listener)
-        recognizer.startListening(intent)
+        try {
+            recognizer.startListening(intent)
+        } catch (t: Throwable) {
+            trySend(SpeechEvent.Error("Unable to start speech recognition: ${t.message ?: "unknown error"}"))
+            close()
+        }
 
         awaitClose {
-            recognizer.stopListening()
+            try {
+                recognizer.stopListening()
+            } catch (_: Throwable) {
+            }
+            recognizer.cancel()
             recognizer.destroy()
         }
     }
 
     private fun errorMessage(code: Int): String = when (code) {
-        SpeechRecognizer.ERROR_AUDIO -> "Audio recording error."
-        SpeechRecognizer.ERROR_CLIENT -> "Recognizer client error."
+        SpeechRecognizer.ERROR_AUDIO -> "Audio recording error. Try the microphone again."
+        SpeechRecognizer.ERROR_CLIENT -> "Speech recognizer error. Try the microphone again."
         SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is required."
-        SpeechRecognizer.ERROR_NETWORK -> "Network error (offline recognition unavailable for this language)."
-        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout."
-        SpeechRecognizer.ERROR_NO_MATCH -> "Didn't catch that — try again."
-        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognizer is busy."
-        SpeechRecognizer.ERROR_SERVER -> "Recognition server error."
-        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech detected."
+        SpeechRecognizer.ERROR_NETWORK -> "Speech recognition needs a network connection for this language."
+        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Speech recognition network timeout. Try again."
+        SpeechRecognizer.ERROR_NO_MATCH -> "I didn't catch that. Try speaking again."
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Speech recognizer is busy. Try again in a moment."
+        SpeechRecognizer.ERROR_SERVER -> "Speech recognition server error. Try again."
+        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech detected. Try again."
         else -> "Speech recognition error ($code)."
     }
 }
