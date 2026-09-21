@@ -2,9 +2,14 @@ package com.aura.ai.di
 
 import com.aura.ai.agent.tool.CalculatorTool
 import com.aura.ai.agent.tool.DateTimeTool
+import com.aura.ai.agent.tool.LaunchAppTool
+import com.aura.ai.agent.tool.MakeCallTool
 import com.aura.ai.agent.tool.RecallMemoryTool
 import com.aura.ai.agent.tool.RecallSkillTool
 import com.aura.ai.agent.tool.RememberTool
+import com.aura.ai.agent.tool.ResolveContactTool
+import com.aura.ai.agent.tool.SendSmsTool
+import com.aura.ai.agent.tool.SetReminderTool
 import com.aura.ai.agent.tool.Tool
 import dagger.Binds
 import dagger.Module
@@ -20,4 +25,9 @@ abstract class ToolModule {
     @Binds @IntoSet abstract fun recallSkill(tool: RecallSkillTool): Tool
     @Binds @IntoSet abstract fun dateTime(tool: DateTimeTool): Tool
     @Binds @IntoSet abstract fun calculator(tool: CalculatorTool): Tool
+    @Binds @IntoSet abstract fun makeCall(tool: MakeCallTool): Tool
+    @Binds @IntoSet abstract fun sendSms(tool: SendSmsTool): Tool
+    @Binds @IntoSet abstract fun resolveContact(tool: ResolveContactTool): Tool
+    @Binds @IntoSet abstract fun launchApp(tool: LaunchAppTool): Tool
+    @Binds @IntoSet abstract fun setReminder(tool: SetReminderTool): Tool
 }
